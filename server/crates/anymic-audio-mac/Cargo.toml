@@ -1,0 +1,10 @@
+[package]
+name = "anymic-audio-mac"
+version = "0.1.0"
+edition = "2021"
+description = "macOS audio device integration for anyMic (CoreAudio / BlackHole)"
+license = "MIT"
+
+[dependencies]
+
+[target.'cfg(target_os = "macos")'.dependencies]

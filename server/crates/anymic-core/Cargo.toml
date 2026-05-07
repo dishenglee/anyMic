@@ -1,0 +1,8 @@
+[package]
+name = "anymic-core"
+version = "0.1.0"
+edition = "2021"
+description = "Core types, protocol definitions and shared logic for anyMic"
+license = "MIT"
+
+[dependencies]

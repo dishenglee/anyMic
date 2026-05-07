@@ -1,0 +1,8 @@
+[package]
+name = "anymic-tauri"
+version = "0.1.0"
+edition = "2021"
+description = "Tauri command handlers and IPC bridge for anyMic"
+license = "MIT"
+
+[dependencies]

@@ -1,0 +1,50 @@
+name: Server CI
+
+on:
+  push:
+    paths:
+      - 'server/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/server-ci.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/server-ci.yml'
+
+jobs:
+  check:
+    # Only macOS for now — anymic-audio-mac has macOS-only deps.
+    # Linux and Windows targets will be enabled in a later milestone.
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.94"
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            server/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('server/**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: cargo fmt --check
+        working-directory: server
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        working-directory: server
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: cargo check
+        working-directory: server
+        run: cargo check --workspace

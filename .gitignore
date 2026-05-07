@@ -1,0 +1,80 @@
+# ===== Rust / Cargo =====
+target/
+Cargo.lock
+*.pdb
+
+# ===== Tauri =====
+src-tauri/target/
+src-tauri/WixTools/
+
+# ===== Kotlin / Android =====
+.kotlin/
+*.class
+*.jar
+!android/gradle/wrapper/gradle-wrapper.jar
+*.apk
+*.aar
+*.ap_
+*.dex
+build/
+.gradle/
+local.properties
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+*.hprof
+gen/
+proguard/
+
+# ===== Android SDK / NDK =====
+local.properties
+
+# ===== macOS =====
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+*.xcuserstate
+
+# ===== JetBrains IDEs =====
+.idea/
+*.iws
+out/
+.idea_modules/
+
+# ===== VSCode =====
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# ===== Node / npm (for Tauri frontend tooling) =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+
+# ===== Misc =====
+*.log
+*.tmp
+*.swp
+*~
+.env
+.env.local

@@ -1,0 +1,10 @@
+[package]
+name = "anymic-audio-win"
+version = "0.1.0"
+edition = "2021"
+description = "Windows audio device integration for anyMic (WASAPI)"
+license = "MIT"
+
+[dependencies]
+
+[target.'cfg(target_os = "windows")'.dependencies]

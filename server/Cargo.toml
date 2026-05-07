@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/anymic-core",
+    "crates/anymic-audio-mac",
+    "crates/anymic-audio-win",
+    "crates/anymic-audio-linux",
+    "crates/anymic-tauri",
+    "src-tauri",
+]

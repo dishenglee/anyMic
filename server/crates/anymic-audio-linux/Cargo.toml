@@ -1,0 +1,10 @@
+[package]
+name = "anymic-audio-linux"
+version = "0.1.0"
+edition = "2021"
+description = "Linux audio device integration for anyMic (PipeWire / PulseAudio)"
+license = "MIT"
+
+[dependencies]
+
+[target.'cfg(target_os = "linux")'.dependencies]
