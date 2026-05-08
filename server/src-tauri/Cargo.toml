@@ -20,3 +20,7 @@ anymic-tauri = { path = "../crates/anymic-tauri" }
 tokio = { version = "1.40", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+objc2-foundation = { version = "0.2", features = ["NSProcessInfo", "NSString"] }

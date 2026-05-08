@@ -9,6 +9,37 @@ use tauri::{
     Manager,
 };
 
+// ── macOS App Nap suppression ─────────────────────────────────────────────────
+//
+// macOS aggressively throttles "idle-looking" apps (App Nap): tokio interval
+// timers slow down, audio thread schedules slip, and the sink ring drains —
+// from the user's perspective the server "freezes" until the app is brought
+// back to the foreground.  Apple's official fix for continuous audio servers
+// is `NSProcessInfo.beginActivity(NSActivityUserInitiated | NSActivityLatencyCritical, reason:)`.
+//
+// We deliberately leak the returned activity object so the suppression is in
+// effect for the entire lifetime of the process.
+#[cfg(target_os = "macos")]
+fn disable_app_nap() {
+    use objc2_foundation::{NSActivityOptions, NSProcessInfo, NSString};
+
+    // bit flags from Apple's NSProcessInfo headers
+    const NS_ACTIVITY_USER_INITIATED: u64 = 0x00FFFFFF;
+    const NS_ACTIVITY_LATENCY_CRITICAL: u64 = 0xFF00000000;
+    let opts = NSActivityOptions(NS_ACTIVITY_USER_INITIATED | NS_ACTIVITY_LATENCY_CRITICAL);
+
+    let info = NSProcessInfo::processInfo();
+    let reason = NSString::from_str("anyMic continuous low-latency audio server");
+    unsafe {
+        let activity = info.beginActivityWithOptions_reason(opts, &reason);
+        std::mem::forget(activity);
+    }
+    tracing::info!("macOS App Nap suppressed (UserInitiated | LatencyCritical)");
+}
+
+#[cfg(not(target_os = "macos"))]
+fn disable_app_nap() {}
+
 // ── App state ─────────────────────────────────────────────────────────────────
 
 struct AppState {
@@ -74,6 +105,8 @@ fn main() {
                 .add_directive(tracing::Level::INFO.into()),
         )
         .init();
+
+    disable_app_nap();
 
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
