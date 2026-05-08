@@ -28,6 +28,8 @@ jobs:
 
       - name: Build (release, NSIS + MSI installers)
         working-directory: server
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: cargo tauri build --bundles nsis,msi
 
       - name: List build outputs

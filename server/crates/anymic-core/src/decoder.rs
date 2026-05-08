@@ -3,10 +3,11 @@
 //! Decodes Opus-encoded audio frames into mono 16-bit PCM samples.
 //! Supports packet loss concealment (PLC) for graceful handling of
 //! dropped frames in real-time voice streaming.
+//!
+//! Backed by the `opus` crate (vendored libopus, `cc`-based build) for
+//! clean cross-compilation between macOS arches.
 
-use audiopus::coder::GenericCtl;
-use audiopus::{coder::Decoder as AudiopusDecoder, Channels, MutSignals, SampleRate};
-use std::convert::TryFrom;
+use opus::{Channels as OpusChannels, Decoder as OpusDecoder};
 use thiserror::Error;
 
 /// Errors that can arise from the Opus frame decoder.
@@ -18,8 +19,8 @@ pub enum DecoderError {
     InvalidFrameSize { got: usize, expected: usize },
 }
 
-impl From<audiopus::Error> for DecoderError {
-    fn from(e: audiopus::Error) -> Self {
+impl From<opus::Error> for DecoderError {
+    fn from(e: opus::Error) -> Self {
         DecoderError::Opus(e.to_string())
     }
 }
@@ -31,8 +32,8 @@ pub trait FrameDecoder: Send {
 
     /// PLC: synthesize `samples` worth of extrapolation when a frame is lost.
     ///
-    /// Passes `None` as the packet to `opus_decode`, which triggers Opus's
-    /// built-in packet-loss concealment path.
+    /// Calls `opus_decode` with empty input + `decode_fec=false`, which
+    /// triggers libopus's built-in packet-loss concealment path.
     fn decode_plc(&mut self, samples: usize) -> Vec<i16>;
 
     /// Reset internal state (call on session reconnect).
@@ -40,10 +41,10 @@ pub trait FrameDecoder: Send {
 }
 
 /// Opus frame decoder with configurable sample rate, channel count, and frame
-/// size. Implements `FrameDecoder` and exposes PLC via the libopus concealment
-/// path (`decode(None, ...)`).
+/// size.  Implements `FrameDecoder` and exposes PLC via the libopus
+/// concealment path (empty input).
 pub struct OpusFrameDecoder {
-    inner: AudiopusDecoder,
+    inner: OpusDecoder,
     sample_rate: u32,
     channels: u16,
     /// Expected number of PCM samples per frame (e.g. 240 for 5 ms @ 48 kHz mono).
@@ -67,22 +68,16 @@ impl OpusFrameDecoder {
         channels: u16,
         frame_samples: usize,
     ) -> Result<Self, DecoderError> {
-        let sr = match sample_rate {
-            8_000 => SampleRate::Hz8000,
-            12_000 => SampleRate::Hz12000,
-            16_000 => SampleRate::Hz16000,
-            24_000 => SampleRate::Hz24000,
-            48_000 => SampleRate::Hz48000,
-            other => {
-                return Err(DecoderError::Opus(format!(
-                    "unsupported sample rate: {other}"
-                )))
-            }
-        };
+        // libopus only accepts these specific rates
+        if !matches!(sample_rate, 8_000 | 12_000 | 16_000 | 24_000 | 48_000) {
+            return Err(DecoderError::Opus(format!(
+                "unsupported sample rate: {sample_rate}"
+            )));
+        }
 
         let ch = match channels {
-            1 => Channels::Mono,
-            2 => Channels::Stereo,
+            1 => OpusChannels::Mono,
+            2 => OpusChannels::Stereo,
             other => {
                 return Err(DecoderError::Opus(format!(
                     "unsupported channel count: {other}"
@@ -90,7 +85,7 @@ impl OpusFrameDecoder {
             }
         };
 
-        let inner = AudiopusDecoder::new(sr, ch)?;
+        let inner = OpusDecoder::new(sample_rate, ch)?;
 
         Ok(Self {
             inner,
@@ -103,24 +98,11 @@ impl OpusFrameDecoder {
 
 impl FrameDecoder for OpusFrameDecoder {
     fn decode(&mut self, opus_payload: &[u8]) -> Result<Vec<i16>, DecoderError> {
-        use audiopus::packet::Packet;
-
-        // Allocate output buffer: frame_samples per channel.
         let buf_len = self.frame_samples * self.channels as usize;
         let mut buf = vec![0i16; buf_len];
 
-        let packet =
-            Packet::try_from(opus_payload).map_err(|e| DecoderError::Opus(e.to_string()))?;
+        let decoded = self.inner.decode(opus_payload, &mut buf, false)?;
 
-        let output = MutSignals::try_from(buf.as_mut_slice())
-            .map_err(|e| DecoderError::Opus(e.to_string()))?;
-
-        let decoded = self
-            .inner
-            .decode(Some(packet), output, false)
-            .map_err(|e| DecoderError::Opus(e.to_string()))?;
-
-        // `decoded` is the number of samples per channel.
         if decoded != self.frame_samples {
             return Err(DecoderError::InvalidFrameSize {
                 got: decoded,
@@ -136,13 +118,8 @@ impl FrameDecoder for OpusFrameDecoder {
         let buf_len = samples * self.channels as usize;
         let mut buf = vec![0i16; buf_len];
 
-        let output = match MutSignals::try_from(buf.as_mut_slice()) {
-            Ok(o) => o,
-            Err(_) => return buf,
-        };
-
-        // Passing `None` as the packet triggers Opus PLC.
-        match self.inner.decode(None, output, false) {
+        // Empty input triggers libopus PLC.
+        match self.inner.decode(&[], &mut buf, false) {
             Ok(n) => {
                 buf.truncate(n * self.channels as usize);
             }
@@ -156,7 +133,6 @@ impl FrameDecoder for OpusFrameDecoder {
     }
 
     fn reset(&mut self) {
-        // Ignore errors: reset_state should always succeed on a valid decoder.
         let _ = self.inner.reset_state();
     }
 }

@@ -42,6 +42,8 @@ jobs:
 
       - name: Build DMG
         working-directory: server
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: cargo tauri build --bundles dmg --target ${{ matrix.target }}
 
       - name: List output
