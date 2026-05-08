@@ -28,7 +28,7 @@ jobs:
 
       - name: Build (release, NSIS + MSI installers)
         working-directory: server
-        run: cargo tauri build --release --bundles nsis,msi
+        run: cargo tauri build --bundles nsis,msi
 
       - name: List build outputs
         if: always()
