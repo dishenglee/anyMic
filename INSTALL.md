@@ -295,8 +295,21 @@ brew uninstall blackhole-2ch && brew install blackhole-2ch
 ## Windows
 
 ### 系统要求
-- Windows 10 (1809+) / Windows 11
+- Windows 10 (1809+) / Windows 11 — **必须 x64 架构**
 - 同 Wi-Fi 网段 + 手机端
+
+> ⚠️ **ARM Windows 不支持**
+>
+> VB-CABLE 是内核态驱动,VB-Audio 没有发布 ARM64 版本,所以 ARM Windows
+> (Surface X、Mac 上的 Parallels ARM Windows VM 等)装 VB-CABLE 后系统
+> 设备列表看不到 CABLE Input/Output,anyMic 启动会报
+> "virtual audio device not found"。这是 VB-CABLE 的限制,不是 anyMic
+> 的 bug —— 任何依赖虚拟音频回环驱动的 Windows 麦克风方案在 ARM 上都
+> 行不通,除非你愿意自己写并签 ARM 内核驱动(本项目的零成本路线明确
+> 排除这条)。
+>
+> 如果你只有 ARM Mac:**直接用 macOS server**(BlackHole 是 ARM 原生
+> 支持的,Apple Silicon 上完美工作),不需要走 Windows VM 这一步。
 
 ### 安装 VB-CABLE
 1. 下载 https://vb-audio.com/Cable/
@@ -315,8 +328,11 @@ brew uninstall blackhole-2ch && brew install blackhole-2ch
 - Windows 系统设置 → 系统 → 声音 → 输入
 
 ### 故障排查
-- "Virtual device not found" → VB-CABLE 没装或未重启系统
-- mDNS 不工作 → 装 Bonjour Print Services for Windows，或在 Android 端用手动 IP
+- "Virtual device not found" → 检查顺序:
+  1. **是 ARM Windows 吗?** ARM 架构装不上 VB-CABLE,见上文 ARM 警告框
+  2. 系统设置 → 声音 → 输入 → 看不到 "CABLE Output" → VB-CABLE 没装好,以管理员身份重装并**必须重启**
+  3. 看到 "CABLE Output" 但 anyMic 还报错 → 设备名跟我代码 hardcode 的 "CABLE Input" 不匹配,把实际名字告诉我我调
+- mDNS 不工作 → 装 Bonjour Print Services for Windows,或在 Android 端用手动 IP
 - Windows 防火墙挡 50127/50128 → 控制面板放行 anymic-app
 
 ---
