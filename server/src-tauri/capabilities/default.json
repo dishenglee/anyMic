@@ -4,6 +4,12 @@
   "description": "Default capability set for anyMic desktop application",
   "windows": ["main"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default"
   ]
 }

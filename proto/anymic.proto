@@ -1,0 +1,234 @@
+syntax = "proto3";
+
+package anymic.v1;
+
+option java_package = "com.anymic.proto.v1";
+option java_multiple_files = true;
+option go_package = "github.com/anymic/anymic/proto/v1;anymic_v1";
+
+// ---------------------------------------------------------------------------
+// Enumerations
+// ---------------------------------------------------------------------------
+
+// Codec identifies the audio encoding used in the UDP data channel.
+enum Codec {
+  CODEC_UNSPECIFIED = 0;
+  // Opus 48 kHz mono, 5 ms frames (240 samples). Preferred codec.
+  OPUS_48K_MONO = 1;
+  // Raw PCM signed 16-bit little-endian, 48 kHz mono. Debug/fallback only.
+  PCM16_RAW = 2;
+}
+
+// OS identifies the operating system of the connecting peer.
+enum OS {
+  OS_UNSPECIFIED = 0;
+  MAC   = 1;
+  WIN   = 2;
+  LINUX = 3;
+  // ANDROID is not a server OS but used for future server-on-phone support.
+  ANDROID = 4;
+}
+
+// ErrorCode enumerates all protocol-level error reasons returned in ErrorMsg.
+// Values are stable; new codes are always added at the end.
+enum ErrorCode {
+  ERROR_UNSPECIFIED    = 0;
+  // Client requested a protocol major version the server does not support.
+  VERSION_MISMATCH     = 1;
+  // Client requested a codec the server cannot provide.
+  CODEC_UNSUPPORTED    = 2;
+  // The session_id supplied during reconnect has expired (> 5 s window).
+  SESSION_EXPIRED      = 3;
+  // Server has reached its maximum simultaneous client count.
+  TOO_MANY_CLIENTS     = 4;
+  // Authentication failed (reserved; auth not implemented in v1).
+  AUTH_FAILED          = 5;
+  // Server is temporarily overloaded; client should retry after back-off.
+  SERVER_BUSY          = 6;
+  // A received message was structurally invalid or had illegal field values.
+  INVALID_PACKET       = 7;
+  // Client sent Ready before HelloAck was received (state machine violation).
+  UNEXPECTED_MESSAGE   = 8;
+  // Keepalive timeout: server did not receive Stats for > 3 intervals.
+  KEEPALIVE_TIMEOUT    = 9;
+}
+
+// ---------------------------------------------------------------------------
+// Client → Server messages
+// ---------------------------------------------------------------------------
+
+// Hello is the first message sent by a client after establishing the TCP
+// control connection.  It MUST be sent before any UDP packets.
+message Hello {
+  // Globally unique client identifier (UUID v4, 36-char canonical form).
+  string client_id = 1;
+
+  // Human-readable client display name (UTF-8, max 64 bytes).
+  string display_name = 2;
+
+  // Client operating system.
+  OS os = 3;
+
+  // Minimum protocol major version the client supports (inclusive).
+  // Must satisfy: min_version_major <= max_version_major.
+  uint32 min_version_major = 4;
+
+  // Maximum protocol major version the client supports (inclusive).
+  uint32 max_version_major = 5;
+
+  // List of codecs the client can encode, in preference order (index 0 = most
+  // preferred).  Must contain at least one entry.
+  repeated Codec codec_caps = 6;
+
+  // Supported sample rates in Hz, e.g. [48000, 16000].
+  // Server picks from this list; 48000 is mandatory.
+  repeated uint32 sample_rates = 7;
+
+  // If non-empty, client is attempting to resume a previous session.
+  // Server honours this only if the session is still within the 3-second
+  // fast-reconnect window.
+  string resume_session_id = 8;
+}
+
+// Stats is sent by the client every 1 000 ms (one-second heartbeat) after the
+// Ready handshake completes.  Missing three consecutive Stats triggers
+// disconnection by the server.
+message Stats {
+  // Round-trip time measured by the client (ms). -1 if unavailable.
+  int32 rtt_ms = 1;
+
+  // Cumulative UDP packets sent since session start.
+  uint64 packets_sent = 2;
+
+  // Cumulative UDP packets lost (estimated via seq gap analysis).
+  uint64 packets_lost = 3;
+
+  // Current jitter buffer depth in milliseconds.
+  uint32 jitter_ms = 4;
+
+  // Device battery level 0–100 (%), -1 if the device has no battery.
+  int32 battery_pct = 5;
+
+  // Audio input level in dBFS, range [-96, 0].  0 = full scale.
+  // Transmitted as an integer (e.g. -18 means -18 dBFS).
+  int32 input_level_dbfs = 6;
+
+  // Client-side monotonic timestamp at which Stats was generated (ms since
+  // session start).  Used to detect Stats reordering.
+  uint64 client_ts_ms = 7;
+}
+
+// Ready is sent by the client immediately after receiving HelloAck.
+// It signals that the client's UDP socket is open and it is ready to stream.
+// No additional fields are required; the message serves as an explicit state
+// transition marker.
+message Ready {}
+
+// Disconnect is sent by either side to initiate a graceful teardown.
+// After sending Disconnect the sender MUST NOT transmit further messages and
+// SHOULD close the TCP connection within 500 ms.
+message Disconnect {
+  // Human-readable reason (UTF-8, max 256 bytes).  Optional.
+  string reason = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Server → Client messages
+// ---------------------------------------------------------------------------
+
+// HelloAck is the server's response to Hello.  It completes the first half of
+// the handshake and provides the client with all parameters needed for
+// streaming.
+message HelloAck {
+  // Opaque session identifier (UUID v4).  The client presents this string
+  // verbatim in Hello.resume_session_id for reconnects.
+  string session_id = 1;
+
+  // The SSRC value the server has assigned to this session (lower 16 bits
+  // are embedded in each UDP packet header as ssrc16).  Full 32-bit value
+  // is stored here for logging and diagnostics.
+  uint32 ssrc = 2;
+
+  // Codec selected by the server from the client's codec_caps list.
+  Codec chosen_codec = 3;
+
+  // Sample rate selected by the server (Hz).  Clients MUST encode at this
+  // rate.  48000 is the standard value for OPUS_48K_MONO.
+  uint32 sample_rate = 4;
+
+  // Frame duration in milliseconds.  Defines the Opus frame size and the
+  // UDP packet rate.  Standard value: 5 ms (200 packets/s).
+  uint32 frame_ms = 5;
+
+  // Negotiated protocol version that will be used for this session.
+  // Encoded identically to the UDP header version byte:
+  //   high nibble = major, low nibble = minor.
+  uint32 negotiated_version = 6;
+
+  // UDP port on which the server will accept data packets for this session.
+  // Clients MUST direct all UDP traffic to this port.
+  // Standard: 50127.
+  uint32 udp_port = 7;
+
+  // Server timestamp (Unix milliseconds) at which HelloAck was generated.
+  // Clients may use this for initial RTT estimation.
+  int64 server_ts_ms = 8;
+}
+
+// Pong is the server's response to Stats.  It echoes the server's current
+// timestamp so the client can compute one-way delay and clock skew.
+message Pong {
+  // Server monotonic timestamp at which Pong was generated (Unix ms).
+  int64 server_ts_ms = 1;
+
+  // Echo of client_ts_ms from the triggering Stats message.
+  // Allows the client to compute RTT = now - echoed_client_ts_ms.
+  uint64 echoed_client_ts_ms = 2;
+}
+
+// ErrorMsg is sent by either side when a protocol violation or unrecoverable
+// error is detected.  After sending ErrorMsg the sender SHOULD send Disconnect
+// and close the TCP connection.
+message ErrorMsg {
+  // Machine-readable error code.
+  ErrorCode code = 1;
+
+  // Human-readable description (UTF-8, max 512 bytes).
+  string message = 2;
+
+  // Optional: the field name or context that caused the error.
+  string detail = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Multiplexing wrappers
+// ---------------------------------------------------------------------------
+
+// ClientMsg is the top-level framing envelope for all client-originated
+// messages on the TCP control stream.  Each TCP message carries exactly one
+// ClientMsg, length-prefixed with a 4-byte big-endian uint32 indicating the
+// serialised byte length of the following protobuf message.
+//
+// Wire format: [ length: u32 BE ][ ClientMsg bytes ]
+message ClientMsg {
+  oneof payload {
+    Hello      hello      = 1;
+    Stats      stats      = 2;
+    Ready      ready      = 3;
+    Disconnect disconnect = 4;
+  }
+}
+
+// ServerMsg is the top-level framing envelope for all server-originated
+// messages on the TCP control stream.  Identical length-prefix framing as
+// ClientMsg.
+//
+// Wire format: [ length: u32 BE ][ ServerMsg bytes ]
+message ServerMsg {
+  oneof payload {
+    HelloAck   hello_ack  = 1;
+    Pong       pong       = 2;
+    Disconnect disconnect = 3;
+    ErrorMsg   error_msg  = 4;
+  }
+}

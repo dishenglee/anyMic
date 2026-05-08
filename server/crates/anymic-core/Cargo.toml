@@ -6,3 +6,13 @@ description = "Core types, protocol definitions and shared logic for anyMic"
 license = "MIT"
 
 [dependencies]
+thiserror = "1"
+audiopus = "0.3.0-rc.0"
+mdns-sd = "0.11"
+
+[dev-dependencies]
+proptest = "1"
+
+[lints.rust]
+# `sample_rate` in OpusFrameDecoder is retained for future use (T05).
+dead_code = "allow"

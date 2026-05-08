@@ -1,0 +1,4 @@
+# libopus source is fetched at build time via tarball (v1.5.2)
+# Do not commit the full opus source tree
+src/main/cpp/opus/
+/build/

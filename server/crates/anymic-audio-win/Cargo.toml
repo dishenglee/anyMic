@@ -2,9 +2,14 @@
 name = "anymic-audio-win"
 version = "0.1.0"
 edition = "2021"
-description = "Windows audio device integration for anyMic (WASAPI)"
+description = "Windows audio device integration for anyMic (WASAPI via cpal)"
 license = "MIT"
 
 [dependencies]
 
 [target.'cfg(target_os = "windows")'.dependencies]
+cpal = "0.15"
+anymic-core = { path = "../anymic-core" }
+thiserror = "1"
+crossbeam = "0.8"
+tracing = "0.1"

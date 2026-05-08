@@ -1,4 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App meta -->
     <string name="app_name">anyMic</string>
+    <string name="app_version">v0.1.0</string>
+
+    <!-- Screen titles -->
+    <string name="screen_home">首页</string>
+    <string name="screen_devices">发现设备</string>
+    <string name="screen_stats">推流统计</string>
+
+    <!-- Buttons -->
+    <string name="btn_discover">发现设备 Discover</string>
+    <string name="btn_show_devices">查看设备列表</string>
+    <string name="btn_connect">连接 Connect</string>
+    <string name="btn_stop">停止 Stop</string>
+    <string name="btn_cancel">取消 Cancel</string>
+    <string name="btn_retry">重试 Retry</string>
+
+    <!-- Home screen status -->
+    <string name="status_idle">未连接</string>
+    <string name="status_discovering">正在搜索…</string>
+    <string name="status_discovering_sub">已发现 %d 台设备</string>
+    <string name="status_connecting">正在连接…</string>
+    <string name="status_streaming">推流中</string>
+    <string name="status_error">连接出错</string>
+    <string name="status_scanning">正在扫描局域网 anyMic 服务…</string>
+
+    <!-- Device list -->
+    <string name="no_devices_found">未发现设备，请先点击"发现设备"</string>
+
+    <!-- Stats screen -->
+    <string name="stats_not_streaming">当前未在推流，请先连接服务器。</string>
+    <string name="stat_packets_sent">发送包数</string>
+    <string name="stat_bytes_sent">发送字节</string>
+    <string name="stat_rtt">往返时延 RTT</string>
+    <string name="stat_dropped_frames">丢弃帧数</string>
+    <string name="stat_source">音频源</string>
+    <string name="stat_session_id">Session ID</string>
+    <string name="chart_rtt_title">RTT 趋势（最近 30 秒）</string>
+    <string name="chart_rtt_subtitle">最近 %d 秒</string>
+
+    <!-- Notification -->
+    <string name="notif_waiting">待连接</string>
+    <string name="notif_discovering">正在搜索设备…</string>
+    <string name="notif_connecting">连接中：%s</string>
+    <string name="notif_streaming" formatted="false">推流中：%s  RTT %d ms</string>
+    <string name="notif_error">错误：%s</string>
+
+    <!-- Accessibility -->
+    <string name="cd_back">返回</string>
+    <string name="cd_mic_icon">麦克风状态</string>
 </resources>

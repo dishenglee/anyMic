@@ -5,25 +5,478 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>anyMic</title>
   <style>
+    /* ── Theme variables (dark = default) ──────────────────────────────── */
+    :root {
+      --bg: #0d0d14;
+      --text: #c8c8d8;
+      --text-strong: #e8e8f8;
+      --text-muted: #606080;
+      --status: #a0a0b8;
+      --card-bg: #0f0f1c;
+      --card-border: #252535;
+      --button-bg: #1a1a2e;
+      --button-border: #404060;
+      --button-border-hover: #7070a0;
+      --primary: #82CFFF;
+      --primary-soft: rgba(130, 207, 255, 0.5);
+      --start-color: #22cc66;
+      --start-border: #22aa55;
+      --start-hover-bg: #0a2a18;
+      --stop-color: #cc4433;
+      --stop-border: #aa3322;
+      --stop-hover-bg: #2a0a0a;
+      --footer: #4a4a68;
+      --running-dot: #22ee66;
+      --running-dot-glow: rgba(34, 238, 102, 0.5);
+      --idle-dot: #555;
+      --error-bg: #2a0808;
+      --error-border: #882222;
+      --error-text: #ee8888;
+    }
+
+    html.theme-light {
+      --bg: #f3f5fa;
+      --text: #1f2030;
+      --text-strong: #0a0b14;
+      --text-muted: #888aa0;
+      --status: #444560;
+      --card-bg: #ffffff;
+      --card-border: #dfe2ec;
+      --button-bg: #ffffff;
+      --button-border: #c8ccd8;
+      --button-border-hover: #5a78b8;
+      --primary: #0066d6;
+      --primary-soft: rgba(0, 102, 214, 0.35);
+      --start-color: #1a8a3a;
+      --start-border: #1a8a3a;
+      --start-hover-bg: #e6f6ec;
+      --stop-color: #b03020;
+      --stop-border: #b03020;
+      --stop-hover-bg: #fbeae6;
+      --footer: #888aa0;
+      --running-dot: #1aaa44;
+      --running-dot-glow: rgba(26, 170, 68, 0.45);
+      --idle-dot: #b8bcc8;
+      --error-bg: #fbe5e5;
+      --error-border: #d04040;
+      --error-text: #b02020;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'PingFang SC', 'Hiragino Sans GB', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px;
+      position: relative;
+      transition: background 0.25s, color 0.25s;
+    }
+
+    .top-controls {
+      position: absolute;
+      top: 16px;
+      right: 20px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #1a1a2e;
-      color: #e0e0e0;
+      gap: 8px;
     }
-    .container { text-align: center; }
-    h1 { font-size: 3rem; margin-bottom: 0.5rem; }
-    p { color: #a0a0b0; }
+
+    .icon-btn,
+    .lang-toggle {
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      background: transparent;
+      border: 1px solid var(--button-border);
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .icon-btn { padding: 4px 9px; font-size: 0.95rem; line-height: 1; }
+    .icon-btn:hover,
+    .lang-toggle:hover {
+      color: var(--text-strong);
+      border-color: var(--button-border-hover);
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-strong);
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--idle-dot);
+      transition: background 0.3s;
+    }
+    .dot.on {
+      background: var(--running-dot);
+      box-shadow: 0 0 8px var(--running-dot-glow);
+      animation: pulse 2s infinite;
+    }
+    .dot.error { background: #ee4444; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 6px var(--running-dot-glow); }
+      50%       { box-shadow: 0 0 14px var(--running-dot-glow); }
+    }
+
+    .status-text {
+      font-size: 0.85rem;
+      color: var(--status);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    button {
+      padding: 10px 28px;
+      border: 1px solid var(--button-border);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--button-bg);
+      color: var(--text);
+    }
+
+    button:hover { border-color: var(--button-border-hover); color: var(--text-strong); }
+    button:active { transform: scale(0.97); }
+
+    #btn-start { border-color: var(--start-border); color: var(--start-color); }
+    #btn-start:hover { background: var(--start-hover-bg); border-color: var(--start-border); }
+    #btn-start:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    #btn-stop { border-color: var(--stop-border); color: var(--stop-color); }
+    #btn-stop:hover { background: var(--stop-hover-bg); border-color: var(--stop-border); }
+    #btn-stop:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .info-card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transition: background 0.25s, border-color 0.25s;
+    }
+
+    .info-section { display: flex; flex-direction: column; gap: 4px; }
+
+    .info-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    html[lang="zh-CN"] .info-label { letter-spacing: 0.04em; text-transform: none; }
+
+    .info-value {
+      font-size: 1.4rem;
+      color: var(--primary);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      user-select: all;
+    }
+    .info-value-small {
+      font-size: 0.95rem;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .client-row { display: flex; align-items: center; gap: 10px; }
+    .client-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--idle-dot);
+      flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .client-dot.on {
+      background: var(--primary);
+      box-shadow: 0 0 6px var(--primary-soft);
+    }
+
+    #error-banner {
+      display: none;
+      width: 100%;
+      max-width: 460px;
+      margin-bottom: 16px;
+      padding: 10px 14px;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      border-radius: 6px;
+      color: var(--error-text);
+      font-size: 0.8rem;
+    }
+
+    .footer {
+      margin-top: 32px;
+      font-size: 0.7rem;
+      color: var(--footer);
+      letter-spacing: 0.06em;
+      user-select: none;
+      text-align: center;
+    }
+    .footer .author {
+      color: var(--primary);
+      opacity: 0.85;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>anyMic</h1>
-    <p>Turn your phone into a wireless microphone — macOS server running.</p>
+  <div class="top-controls">
+    <button class="icon-btn" id="btn-theme" title="Toggle theme">☾</button>
+    <button class="lang-toggle" id="btn-lang">中</button>
   </div>
+
+  <h1>anyMic</h1>
+  <p class="subtitle" data-i18n="subtitle">Wireless microphone server</p>
+
+  <div class="status-row">
+    <div class="dot" id="dot"></div>
+    <span class="status-text" id="status-text" data-state="stopped">Stopped</span>
+  </div>
+
+  <div id="error-banner"></div>
+
+  <div class="btn-row">
+    <button id="btn-start" data-i18n="btn_start">Start</button>
+    <button id="btn-stop" disabled data-i18n="btn_stop">Stop</button>
+  </div>
+
+  <div class="info-card">
+    <div class="info-section">
+      <span class="info-label" data-i18n="lbl_server_ip">Server IP</span>
+      <span class="info-value" id="info-ip">—</span>
+    </div>
+    <div class="info-section">
+      <span class="info-label" data-i18n="lbl_ports">Ports (data / control)</span>
+      <span class="info-value-small" id="info-ports">—</span>
+    </div>
+    <div class="info-section">
+      <span class="info-label" data-i18n="lbl_client">Client connection</span>
+      <div class="client-row">
+        <div class="client-dot" id="client-dot"></div>
+        <span class="info-value-small" id="info-client">No device connected</span>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <span data-i18n="footer_prefix">WeChat</span>:
+    <span class="author">涤生AGI</span> · anyMic v0.1.0
+  </footer>
+
+  <script>
+    const { invoke } = window.__TAURI__.core;
+
+    // ── i18n ────────────────────────────────────────────────────────────────
+    const i18n = {
+      en: {
+        subtitle: "Wireless microphone server",
+        status_stopped: "Stopped",
+        status_running: "Running",
+        status_error: "Error",
+        btn_start: "Start",
+        btn_stop: "Stop",
+        lbl_server_ip: "Server IP (enter on phone)",
+        lbl_ports: "Ports (data / control)",
+        lbl_client: "Client connection",
+        client_none: "No device connected",
+        client_format: "Connected from {addr}",
+        err_start: "Failed to start: ",
+        err_stop: "Failed to stop: ",
+        toggle_label: "中",
+        footer_prefix: "WeChat",
+      },
+      zh: {
+        subtitle: "无线麦克风服务器",
+        status_stopped: "已停止",
+        status_running: "运行中",
+        status_error: "错误",
+        btn_start: "启动",
+        btn_stop: "停止",
+        lbl_server_ip: "服务器 IP(在手机上输入)",
+        lbl_ports: "端口(数据 / 控制)",
+        lbl_client: "客户端连接",
+        client_none: "无设备连接",
+        client_format: "已连接 — {addr}",
+        err_start: "启动失败:",
+        err_stop: "停止失败:",
+        toggle_label: "EN",
+        footer_prefix: "公众号",
+      },
+    };
+
+    function detectLang() {
+      const saved = localStorage.getItem('anymic-lang');
+      if (saved === 'zh' || saved === 'en') return saved;
+      return (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    }
+    let lang = detectLang();
+    function t(key) { return i18n[lang][key] || key; }
+
+    function applyI18n() {
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const val = i18n[lang][key];
+        if (val !== undefined) el.textContent = val;
+      });
+      document.getElementById('btn-lang').textContent = t('toggle_label');
+      const stEl = document.getElementById('status-text');
+      const state = stEl.getAttribute('data-state') || 'stopped';
+      stEl.textContent = t('status_' + state);
+    }
+
+    document.getElementById('btn-lang').addEventListener('click', () => {
+      lang = lang === 'zh' ? 'en' : 'zh';
+      localStorage.setItem('anymic-lang', lang);
+      applyI18n();
+    });
+
+    // ── Light / dark theme ──────────────────────────────────────────────────
+    function detectThemeMode() {
+      const saved = localStorage.getItem('anymic-theme-mode');
+      if (saved === 'light' || saved === 'dark') return saved;
+      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    let themeMode = detectThemeMode();
+    const btnTheme = document.getElementById('btn-theme');
+
+    function applyThemeMode(mode) {
+      document.documentElement.classList.toggle('theme-light', mode === 'light');
+      // Show the icon for the *other* mode (i.e. what tapping will switch to).
+      btnTheme.textContent = (mode === 'light') ? '☾' : '☀';
+      btnTheme.title = (mode === 'light') ? 'Switch to dark' : 'Switch to light';
+    }
+    applyThemeMode(themeMode);
+
+    btnTheme.addEventListener('click', () => {
+      themeMode = (themeMode === 'light') ? 'dark' : 'light';
+      localStorage.setItem('anymic-theme-mode', themeMode);
+      applyThemeMode(themeMode);
+    });
+
+    // ── Server controls / stats ─────────────────────────────────────────────
+    const btnStart   = document.getElementById('btn-start');
+    const btnStop    = document.getElementById('btn-stop');
+    const dot        = document.getElementById('dot');
+    const statusText = document.getElementById('status-text');
+    const errBanner  = document.getElementById('error-banner');
+    const infoIp     = document.getElementById('info-ip');
+    const infoPorts  = document.getElementById('info-ports');
+    const infoClient = document.getElementById('info-client');
+    const clientDot  = document.getElementById('client-dot');
+
+    function showError(prefixKey, detail) {
+      errBanner.textContent = t(prefixKey) + detail;
+      errBanner.style.display = 'block';
+    }
+    function clearError() { errBanner.style.display = 'none'; }
+
+    function setRunning(yes) {
+      const state = yes ? 'running' : 'stopped';
+      dot.className = 'dot ' + (yes ? 'on' : '');
+      statusText.setAttribute('data-state', state);
+      statusText.textContent = t('status_' + state);
+      btnStart.disabled = yes;
+      btnStop.disabled  = !yes;
+    }
+
+    function applyStats(s) {
+      setRunning(s.running);
+      infoIp.textContent    = s.local_ip || '—';
+      infoPorts.textContent = (s.bound_data_port && s.bound_control_port)
+        ? `${s.bound_data_port} / ${s.bound_control_port}`
+        : '—';
+
+      const lastPkt = s.last_packet_at_ms_since_start;
+      const uptime  = s.server_uptime_ms || 0;
+      const connected = (lastPkt != null) && (uptime - lastPkt < 3000);
+
+      if (connected && s.last_client_addr) {
+        clientDot.className = 'client-dot on';
+        infoClient.textContent = t('client_format').replace('{addr}', s.last_client_addr);
+      } else {
+        clientDot.className = 'client-dot';
+        infoClient.textContent = t('client_none');
+      }
+    }
+
+    btnStart.addEventListener('click', async () => {
+      clearError();
+      btnStart.disabled = true;
+      try {
+        const stats = await invoke('start');
+        applyStats(stats);
+      } catch (e) {
+        showError('err_start', String(e));
+        statusText.setAttribute('data-state', 'error');
+        dot.className = 'dot error';
+        statusText.textContent = t('status_error');
+        btnStart.disabled = false;
+      }
+    });
+
+    btnStop.addEventListener('click', async () => {
+      clearError();
+      btnStop.disabled = true;
+      try {
+        await invoke('stop');
+        setRunning(false);
+        infoClient.textContent = t('client_none');
+        clientDot.className = 'client-dot';
+      } catch (e) {
+        showError('err_stop', String(e));
+        btnStop.disabled = false;
+      }
+    });
+
+    async function pollStats() {
+      try {
+        const s = await invoke('get_stats');
+        applyStats(s);
+      } catch (_) { /* ignore */ }
+    }
+
+    applyI18n();
+    setInterval(pollStats, 500);
+    pollStats();
+  </script>
 </body>
 </html>

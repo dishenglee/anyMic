@@ -8,3 +8,8 @@ license = "MIT"
 [dependencies]
 
 [target.'cfg(target_os = "macos")'.dependencies]
+coreaudio-rs = { version = "0.12", features = ["audio_unit", "core_audio"] }
+core-foundation = "0.10"
+core-foundation-sys = "0.8"
+anymic-core = { path = "../anymic-core" }
+thiserror = "1"
