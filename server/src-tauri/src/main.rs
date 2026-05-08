@@ -104,6 +104,17 @@ fn main() {
     tauri::Builder::default()
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![start, stop, get_stats])
+        .on_window_event(|window, event| {
+            // Closing the window should NOT quit the app — the audio server
+            // must keep running in the background.  Hide the window instead;
+            // the system tray icon stays visible so the user can bring it
+            // back via "显示窗口 / Show".  Cmd+Q (RunEvent::ExitRequested
+            // path) and the tray "退出" item still quit normally.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .setup(|app| {
             // System tray with bilingual menu items.
             let show = MenuItem::with_id(app, "show", "显示窗口 / Show", true, None::<&str>)?;
